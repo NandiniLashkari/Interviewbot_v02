@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>InterviewBot - Interview Rules</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(to bottom right, #000000, #212191);
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .hero {
+      max-width: 900px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 3rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      text-align: center;
+      animation: fadeIn 1s ease forwards;
+    }
+    h1 {
+      color: #0ff;
+      font-size: 2.2rem;
+      margin-bottom: 1rem;
+      border-bottom: 3px solid #0ff;
+      display: inline-block;
+      padding-bottom: 0.5rem;
+    }
+    ul {
+      text-align: left;
+      margin-top: 2rem;
+      padding-left: 0;
+      list-style: none;
+    }
+    ul li {
+      margin: 1rem 0;
+      padding: 1rem;
+      background: rgba(255,255,255,0.08);
+      border-left: 4px solid #0ff;
+      border-radius: 8px;
+    }
+    button {
+      margin-top: 2.5rem;
+      background: #0ff;
+      color: #000;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1rem;
+      box-shadow: 0 0 10px #0ff, 0 0 20px #0ff6;
+      transition: transform 0.2s ease;
+    }
+    button:hover {
+      background: #0cc;
+      transform: scale(1.05);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media(max-width: 768px){
+      .hero { padding: 2rem; }
+      h1 { font-size: 1.8rem; }
+    }
+    @media(max-width: 480px){
+      .hero { padding: 1.5rem; }
+      h1 { font-size: 1.5rem; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>Interview Guidelines & Rules</h1>
+    <ul>
+      <li>The interview is fully virtual and conducted through InterviewBot’s AI interviewer.</li>
+      <li>Please ensure you have a working microphone and a quiet environment to avoid disruptions.</li>
+      <li>When the AI is speaking, please wait until it finishes before responding.</li>
+      <li>Switching tabs or navigating away will immediately end the interview.</li>
+      <li>Your screen and microphone will be recorded for the entire interview for evaluation purposes.</li>
+      <li>At the end of the interview, a detailed summary of your answers and feedback will be provided.</li>
+      <li>The interview will end automatically after the last question, and your data will be stored securely.</li>
+      <li>By clicking below, you agree to these terms and confirm your consent for screen recording.</li>
+    </ul>
+    <button onclick="window.location.href='interview.html'">I Agree, Start Interview</button>
+  </div>
+</body>
+</html>

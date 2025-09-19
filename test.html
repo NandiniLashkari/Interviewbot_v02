@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <button onclick="test()">Test POST</button>
+    <script>
+        async function test() {
+            try {
+                const formData = new FormData();
+                formData.append('name', 'Nandini Lashkari');
+                formData.append('phone', '7990972897');
+                formData.append('email', 'nlashkari30@gmail.com');
+                formData.append('jobDesc', 'Job Title: AR/VR Developer\nLocation: Bangalore, India\n\nJob Description:\nWe are seeking a passionate and creative AR/VR Developer...');
+                // Note: File upload via fetch requires a File object, which is not easily simulated in test.html
+                // For testing, comment out the resume validation in app.py temporarily (see below)
+                console.log('FormData contents:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(`${key}: ${value}`);
+                }
+                const response = await fetch('http://127.0.0.1:5000/submit_user_data', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                const result = await response.json();
+                console.log('Response:', result);
+            } catch (error) {
+                console.error('Test error:', error.message);
+            }
+        }
+    </script>
+</body>
+</html>

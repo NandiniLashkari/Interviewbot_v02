@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InterviewBot - User Information</title>
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(to bottom right, #000000, #212191);
+            font-family: 'Segoe UI', sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .form-container {
+            background: #1a1a40;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px #0ff6;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            color: #0ff;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        label {
+            display: block;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            margin-bottom: 0.5rem;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            background: #333;
+            color: #fff;
+        }
+        textarea {
+            resize: vertical;
+            height: 100px;
+        }
+        input[type="file"] {
+            padding: 0.5rem;
+            background: none;
+        }
+        button {
+            background: #0ff;
+            color: #000;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 10px #0ff, 0 0 20px #0ff6;
+            margin-top: 1rem;
+        }
+        button:hover {
+            background: #0cc;
+        }
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 1.5rem;
+                width: 95%;
+            }
+            h1 {
+                font-size: clamp(1.2rem, 3.5vw, 1.5rem);
+            }
+            button {
+                padding: 0.6rem 1.2rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .form-container {
+                padding: 1rem;
+            }
+            h1 {
+                font-size: clamp(1rem, 3vw, 1.2rem);
+            }
+            label, input, textarea, button {
+                font-size: clamp(0.8rem, 2vw, 0.9rem);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>InterviewBot - Enter Your Details</h1>
+        <form id="userForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" placeholder="Enter your name" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email" required>
+            </div>
+            <div class="form-group">
+                <label for="jobDesc">Job Description</label>
+                <textarea id="jobDesc" name="jobDesc" placeholder="Paste job description here..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="resume">Upload Resume (PDF or Image)</label>
+                <input type="file" id="resume" name="resume" accept=".pdf,.jpg,.jpeg,.png" required>
+            </div>
+            <button type="submit">Submit and Start Interview</button>
+        </form>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('userForm');
+            if (!form) {
+                console.error('Form with ID "userForm" not found');
+                alert('Form not found. Please check the HTML.');
+                return;
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData();
+                const nameInput = document.getElementById('name');
+                const phoneInput = document.getElementById('phone');
+                const emailInput = document.getElementById('email');
+                const jobDescInput = document.getElementById('jobDesc');
+                const resumeInput = document.getElementById('resume');
+
+                if (!nameInput || !phoneInput || !emailInput || !jobDescInput || !resumeInput) {
+                    console.error('One or more form inputs not found:', {
+                        name: !!nameInput,
+                        phone: !!phoneInput,
+                        email: !!emailInput,
+                        jobDesc: !!jobDescInput,
+                        resume: !!resumeInput
+                    });
+                    alert('One or more form fields are missing. Please check the HTML.');
+                    return;
+                }
+
+                formData.append('name', nameInput.value ? nameInput.value.trim() : '');
+                formData.append('phone', phoneInput.value ? phoneInput.value.trim() : '');
+                formData.append('email', emailInput.value ? emailInput.value.trim() : '');
+                formData.append('jobDesc', jobDescInput.value ? jobDescInput.value.trim() : '');
+                const resumeFile = resumeInput.files[0];
+                if (!resumeFile) {
+                    alert('Please select a resume file.');
+                    return;
+                }
+                formData.append('resume', resumeFile);
+
+                console.log('FormData contents:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(`${key}: ${value instanceof File ? value.name : value}`);
+                }
+
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000);
+                    console.log('Sending POST request to /submit_user_data');
+                    const response = await fetch('http://127.0.0.1:5000/submit_user_data', {
+                        method: 'POST',
+                        body: formData,
+                        signal: controller.signal,
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    clearTimeout(timeoutId);
+
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', [...response.headers.entries()]);
+                    const result = await response.json();
+                    console.log('Response body:', result);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}, Message: ${result.error || 'Unknown error'}`);
+                    }
+
+                    if (result.status === 'success') {
+                        console.log('Submission successful, redirecting to /rules.html');
+                        setTimeout(() => {
+                            window.location.href = './rules.html';
+                        }, 1000);
+                    } else {
+                        alert('Error submitting data: ' + result.error);
+                    }
+
+                } catch (error) {
+                    console.error('Submission error:', error.message, error.stack);
+                    console.log('FormData sent:', [...formData.entries()]);
+                    console.log('Check if Flask server is running on http://127.0.0.1:5501 and logs for errors.');
+                    alert(`Failed to submit data: ${error.message}. Check browser Network tab and Flask logs for errors.`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+
+<!DOCTYPE html>
+<html>
+  <body style="background:#000; color:#0ff;">
+    <button id="start">Start Screen Recording</button>
+    <script>
+      document.getElementById("start").addEventListener("click", async () => {
+        try {
+          const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          console.log("stream OK", stream);
+        } catch(e) {
+          console.error("stream ERROR", e);
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Interview Summary Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.1/docx.umd.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    h1 { color: #007BFF; }
+    .chart-container { width: 400px; margin: auto; }
+    .section { margin-top: 2rem; }
+    ul { list-style-type: disc; margin-left: 2rem; }
+    button { margin: 1rem; padding: 0.5rem 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Interview Summary Report</h1>
+  <div class="chart-container">
+    <canvas id="scoreChart"></canvas>
+  </div>
+
+  <div class="section">
+    <h2>Strengths</h2>
+    <ul id="strengths"></ul>
+  </div>
+
+  <div class="section">
+    <h2>Areas to Improve</h2>
+    <ul id="weaknesses"></ul>
+  </div>
+
+  <div class="section">
+    <h2>Feedback</h2>
+    <p id="feedback"></p>
+  </div>
+
+  <button id="downloadPdf">Download PDF</button>
+  <button id="downloadDocx">Download Word</button>
+
+  <script>
+    async function loadReport() {
+      try {
+        const res = await fetch('/interview_report.json');
+        const report = await res.json();
+
+        const ctx = document.getElementById('scoreChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: ['Communication', 'Confidence', 'Domain Knowledge', 'Overall'],
+            datasets: [{
+              label: 'Score (0-10)',
+              data: [
+                report.communication,
+                report.confidence,
+                report.domain_knowledge,
+                report.overall_score
+              ],
+              backgroundColor: 'rgba(0, 123, 255, 0.3)',
+              borderColor: 'rgba(0, 123, 255, 1)',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            scales: {
+              r: { suggestedMin: 0, suggestedMax: 10 }
+            }
+          }
+        });
+
+        // strengths
+        const strengthsEl = document.getElementById('strengths');
+        report.strengths.forEach(str => {
+          const li = document.createElement('li');
+          li.textContent = str;
+          strengthsEl.appendChild(li);
+        });
+
+        // weaknesses
+        const weaknessesEl = document.getElementById('weaknesses');
+        report.weaknesses.forEach(w => {
+          const li = document.createElement('li');
+          li.textContent = w;
+          weaknessesEl.appendChild(li);
+        });
+
+        document.getElementById('feedback').textContent = report.feedback;
+
+        // download buttons
+        document.getElementById('downloadPdf').addEventListener('click', () => {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+          doc.text("Interview Summary Report", 10, 10);
+          doc.text(`Communication: ${report.communication}`, 10, 20);
+          doc.text(`Confidence: ${report.confidence}`, 10, 30);
+          doc.text(`Domain Knowledge: ${report.domain_knowledge}`, 10, 40);
+          doc.text(`Overall Score: ${report.overall_score}`, 10, 50);
+          doc.text("Strengths:", 10, 60);
+          report.strengths.forEach((s, i) => doc.text(`- ${s}`, 15, 70 + i*10));
+          doc.text("Weaknesses:", 10, 100);
+          report.weaknesses.forEach((w, i) => doc.text(`- ${w}`, 15, 110 + i*10));
+          doc.text("Feedback:", 10, 140);
+          doc.text(report.feedback, 10, 150);
+          doc.save("Interview_Report.pdf");
+        });
+
+        document.getElementById('downloadDocx').addEventListener('click', () => {
+          const { Document, Packer, Paragraph, TextRun } = window.docx;
+          const doc = new Document({
+            sections: [{
+              properties: {},
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: "Interview Summary Report", bold: true, size: 32 })]
+                }),
+                new Paragraph(`Communication: ${report.communication}`),
+                new Paragraph(`Confidence: ${report.confidence}`),
+                new Paragraph(`Domain Knowledge: ${report.domain_knowledge}`),
+                new Paragraph(`Overall Score: ${report.overall_score}`),
+                new Paragraph("Strengths:"),
+                ...report.strengths.map(s => new Paragraph(`• ${s}`)),
+                new Paragraph("Weaknesses:"),
+                ...report.weaknesses.map(w => new Paragraph(`• ${w}`)),
+                new Paragraph("Feedback:"),
+                new Paragraph(report.feedback)
+              ]
+            }]
+          });
+          Packer.toBlob(doc).then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "Interview_Report.docx";
+            a.click();
+          });
+        });
+
+      } catch (e) {
+        console.error("Error loading report:", e);
+      }
+    }
+
+    loadReport();
+  </script>
+</body>
+</html>
