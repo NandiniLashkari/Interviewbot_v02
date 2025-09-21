@@ -276,7 +276,7 @@
 
         async function fetchUserData() {
             try {
-                const response = await fetch('http://127.0.0.1:5000/get_user_data', {
+                const response = await fetch('/get_user_data', {
                     method: 'GET',
                     headers: { 'Accept': 'application/json' }
                 });
@@ -298,7 +298,7 @@
             try {
                 const numQuestions = Math.floor(Math.random() * 3) + 3;
                 console.log('Generating questions:', { numQuestions, jobDescription, previousAnswer });
-                const response = await fetch('http://127.0.0.1:5000/generate_questions', {
+                const response = await fetch('/generate_questions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -326,7 +326,7 @@
         async function fetchFromGemini(promptText) {
             try {
                 console.log('Fetching from Gemini with prompt:', promptText.substring(0, 100) + '...');
-                const response = await fetch('http://127.0.0.1:5000/generate_response', {
+                const response = await fetch('/generate_response', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: promptText })
@@ -358,7 +358,7 @@
             `;
 
             try {
-                const response = await fetch('http://127.0.0.1:5000/generate_response', {
+                const response = await fetch('/generate_response', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: summaryPrompt })
@@ -650,7 +650,7 @@
                                                 screenRecorder.stop();
                                             }
                                             console.log('Storing answers:', interviewAnswers);
-                                            await fetch('http://127.0.0.1:5000/store_answers', {
+                                            await fetch('/store_answers', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({ answers: interviewAnswers })
@@ -741,7 +741,7 @@
                         screenRecorder.stop();
                     }
                     console.log('Storing answers:', interviewAnswers);
-                    await fetch('http://127.0.0.1:5000/store_answers', {
+                    await fetch('/store_answers', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ answers: interviewAnswers })

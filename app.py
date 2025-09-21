@@ -25,14 +25,39 @@ CORS(app, resources={
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Set Tesseract path
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-if not os.path.exists(pytesseract.pytesseract.tesseract_cmd):
-    logger.error("Tesseract executable not found")
-    raise FileNotFoundError("Tesseract executable not found")
+# Set Tesseract path for Hugging Face Spaces
+# Try different possible paths for Tesseract
+tesseract_paths = [
+    "/usr/bin/tesseract",
+    "/usr/local/bin/tesseract",
+    "/opt/homebrew/bin/tesseract",
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+]
 
-# Set Poppler path
-os.environ['PATH'] += os.pathsep + r"C:\Program Files\Poppler\bin"
+tesseract_found = False
+for path in tesseract_paths:
+    if os.path.exists(path):
+        pytesseract.pytesseract.tesseract_cmd = path
+        tesseract_found = True
+        logger.info(f"Tesseract found at: {path}")
+        break
+
+if not tesseract_found:
+    logger.warning("Tesseract not found in standard locations. OCR functionality may not work.")
+
+# Set Poppler path for Hugging Face Spaces
+poppler_paths = [
+    "/usr/bin",
+    "/usr/local/bin",
+    "/opt/homebrew/bin",
+    r"C:\Program Files\Poppler\bin"
+]
+
+for path in poppler_paths:
+    if os.path.exists(path):
+        os.environ['PATH'] += os.pathsep + path
+        logger.info(f"Poppler path added: {path}")
+        break
 
 # Blacklist and titles
 BLACKLIST = {'I', 'me', 'you', 'he', 'she', 'it', 'we', 'they', 'the', 'a', 'an', 'and', 'or', 'but', 'good', 'great', 'bad', 'nice', 'big', 'small', 'new', 'old'}
@@ -147,22 +172,38 @@ def submit_user_data():
         logger.info(f"Saved file: {file_path}")
 
         if file.filename.lower().endswith('.pdf'):
-            images = pdf2image.convert_from_path(file_path)
-            if not images:
-                raise ValueError("No images extracted from PDF")
-            image = images[0]
+            try:
+                images = pdf2image.convert_from_path(file_path)
+                if not images:
+                    raise ValueError("No images extracted from PDF")
+                image = images[0]
+            except Exception as e:
+                logger.error(f"Error converting PDF: {e}")
+                # Fallback: try without poppler
+                response = make_response(jsonify({'error': 'PDF processing failed. Please try uploading an image instead.', 'status': 'error'}), 400)
+                response.headers['Access-Control-Allow-Origin'] = '*'
+                response.headers['Content-Type'] = 'application/json'
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                return response
         else:
             image = Image.open(file_path)
         logger.info("Image loaded successfully")
 
         image = image.convert('L')
-        data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, config='--psm 6')
-        df = pd.DataFrame(data)
-        df = df[df['text'].str.strip().astype(bool)]
-        df['text'] = df['text'].str.strip()
-        df['height'] = df['height'].astype(float)
-        text = pytesseract.image_to_string(image, config='--psm 6')
-        logger.info(f"Extracted text: {text[:200]}...")
+        try:
+            data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, config='--psm 6')
+            df = pd.DataFrame(data)
+            df = df[df['text'].str.strip().astype(bool)]
+            df['text'] = df['text'].str.strip()
+            df['height'] = df['height'].astype(float)
+            text = pytesseract.image_to_string(image, config='--psm 6')
+            logger.info(f"Extracted text: {text[:200]}...")
+        except Exception as e:
+            logger.error(f"OCR failed: {e}")
+            # Fallback text extraction
+            text = "Resume uploaded successfully. OCR processing failed, but you can still proceed with the interview."
+            df = pd.DataFrame({'text': [text], 'height': [12.0]})
 
         detected_name = extract_name_from_text(text, df)
         final_name = name if name else detected_name
@@ -290,7 +331,8 @@ def generate_questions():
             )
         prompt += "Provide the questions in plain text, numbered 1 to {num_questions}."
 
-        api_key = "AIzaSyB3K47UGq3dVh_VZZvNpbNuqfiB8v-F-ys"
+        # Use environment variable for API key
+        api_key = os.getenv("GEMINI_API_KEY", "AIzaSyB3K47UGq3dVh_VZZvNpbNuqfiB8v-F-ys")
         if not api_key:
             logger.error("GEMINI_API_KEY not set")
             response = make_response(jsonify({"status": "error", "error": "API key not configured"}), 500)
@@ -346,7 +388,7 @@ def generate_questions():
                 "How do you handle tight deadlines?",
                 "Why are you interested in this position?",
                 "Describe a time you worked in a team."
-            ].slice(0, num_questions),
+            ][:num_questions],
             "error": str(e)
         }), 200)
         response.headers['Access-Control-Allow-Origin'] = '*'
@@ -367,7 +409,8 @@ def generate_response():
             logger.debug("Response headers: %s", response.headers)
             return response
 
-        api_key = "AIzaSyB3K47UGq3dVh_VZZvNpbNuqfiB8v-F-ys"
+        # Use environment variable for API key
+        api_key = os.getenv("GEMINI_API_KEY", "AIzaSyB3K47UGq3dVh_VZZvNpbNuqfiB8v-F-ys")
         if not api_key:
             logger.error("GEMINI_API_KEY not set")
             response = make_response(jsonify({"status": "error", "error": "API key not configured"}), 500)
@@ -545,8 +588,7 @@ def generate_summary():
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)}), 500
 
-
-
-
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # For Hugging Face Spaces
+    port = int(os.environ.get('PORT', 7860))
+    app.run(debug=False, host='0.0.0.0', port=port)
