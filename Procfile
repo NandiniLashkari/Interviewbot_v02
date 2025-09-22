@@ -1,1 +1,1 @@
-web: gun
+web: gunicorn app:app
