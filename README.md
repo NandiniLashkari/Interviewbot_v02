@@ -15,7 +15,7 @@ short_description: An AI-powered virtual interview assistant with 3D character i
 
 InterviewBot is an innovative virtual interview platform that combines AI-powered question generation, 3D character interaction, and real-time speech recognition to provide a comprehensive mock interview experience.
 
-## 🌟 Features
+##  Features
 
 - **3D Virtual Interviewer**: Interactive 3D character with realistic animations and lip-sync
 - **AI-Powered Questions**: Dynamic question generation based on resume and job description using Google Gemini
@@ -25,7 +25,7 @@ InterviewBot is an innovative virtual interview platform that combines AI-powere
 - **Intelligent Feedback**: AI-generated interview summary and evaluation
 - **Responsive Design**: Works on desktop and mobile devices
 
-## 🚀 How to Use
+##  How to Use
 
 1. **Upload Your Resume**: Submit your resume (PDF or image format) along with your personal details
 2. **Enter Job Description**: Paste the job description you're preparing for
@@ -33,7 +33,7 @@ InterviewBot is an innovative virtual interview platform that combines AI-powere
 4. **Answer Questions**: Speak your answers naturally - the system uses speech recognition
 5. **Get Feedback**: Receive AI-generated feedback and interview summary at the end
 
-## 🛠️ Technical Stack
+##  Technical Stack
 
 - **Backend**: Flask (Python)
 - **Frontend**: HTML5, CSS3, JavaScript
@@ -43,14 +43,14 @@ InterviewBot is an innovative virtual interview platform that combines AI-powere
 - **Speech**: Web Speech API + ElevenLabs TTS
 - **File Processing**: pdf2image, Pillow
 
-## 📋 Requirements
+##  Requirements
 
 - Modern web browser with microphone access
 - JavaScript enabled
 - Stable internet connection
 - Microphone for voice interaction
 
-## 🔧 Setup for Local Development
+## Setup for Local Development
 
 1. Clone the repository
 2. Install dependencies:
@@ -69,7 +69,7 @@ InterviewBot is an innovative virtual interview platform that combines AI-powere
    python app.py
    ```
 
-## 🌐 Deployment on Hugging Face Spaces
+##  Deployment on Hugging Face Spaces
 
 This application is configured to run on Hugging Face Spaces. The main requirements are:
 
@@ -78,7 +78,7 @@ This application is configured to run on Hugging Face Spaces. The main requireme
 - Static files in the `static/` directory
 - Environment variables for API keys
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 ├── app.py                 # Main Flask application
@@ -95,7 +95,7 @@ This application is configured to run on Hugging Face Spaces. The main requireme
 └── user.json           # User data storage
 ```
 
-## 🔑 API Keys Required
+##  API Keys Required
 
 To use the full functionality, you'll need:
 
@@ -107,7 +107,7 @@ To use the full functionality, you'll need:
    - Get it from: https://elevenlabs.io/app/profile/api-keys
    - Update in `static/interview.html`
 
-## 🎯 Features in Detail
+##  Features in Detail
 
 ### 3D Character Interaction
 - Realistic 3D character with multiple animations
@@ -133,22 +133,22 @@ To use the full functionality, you'll need:
 - Name detection and validation
 - Support for multiple file formats
 
-## 🚨 Important Notes
+##  Important Notes
 
 - The application requires microphone access for voice interaction
 - Screen recording is optional but recommended for review
 - All data is processed locally and not stored permanently
 - The 3D models are loaded from CDN for better performance
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Three.js for 3D graphics
 - Google Gemini for AI capabilities
