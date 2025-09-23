@@ -1,6 +1,5 @@
 ---
 title: InterviewBot - AI-Powered Virtual Interview Assistant
-emoji: 🤖
 colorFrom: blue
 colorTo: purple
 sdk: gradio
