@@ -1,149 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Interview Summary Report</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.1/docx.umd.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; }
-    h1 { color: #007BFF; }
-    .chart-container { width: 400px; margin: auto; }
-    .section { margin-top: 2rem; }
-    ul { list-style-type: disc; margin-left: 2rem; }
-    button { margin: 1rem; padding: 0.5rem 1rem; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>InterviewBot - Summary Report</title>
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(to bottom right, #000000, #212191);
+            font-family: 'Segoe UI', sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: #1a1a40;
+            padding: 1rem;
+            text-align: center;
+            font-size: clamp(1.5rem, 4vw, 1.8rem);
+            color: #0ff;
+            box-shadow: 0 2px 10px #0ff4;
+            z-index: 10;
+        }
+        main {
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            flex: 1;
+            z-index: 5;
+        }
+        .report-container {
+            background: rgba(26, 26, 64, 0.7);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px #0ff, 0 0 20px #0ff6;
+        }
+        h2 {
+            color: #0ff;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            margin-bottom: 1rem;
+        }
+        p, li {
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            line-height: 1.6;
+            margin: 0.5rem 0;
+        }
+        button {
+            background: #0ff;
+            color: #000;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 10px #0ff, 0 0 20px #0ff6;
+            margin-top: 1rem;
+        }
+        button:hover {
+            background: #0cc;
+        }
+        footer {
+            background: #1a1a40;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            color: #0ff;
+            z-index: 10;
+        }
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+            button {
+                padding: 0.6rem 1.2rem;
+            }
+        }
+        @media (max-width: 480px) {
+            header, footer {
+                font-size: clamp(1rem, 3vw, 1.2rem);
+            }
+            h2 {
+                font-size: clamp(1rem, 2.5vw, 1.2rem);
+            }
+            p, li {
+                font-size: clamp(0.8rem, 2vw, 0.9rem);
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>Interview Summary Report</h1>
-  <div class="chart-container">
-    <canvas id="scoreChart"></canvas>
-  </div>
-
-  <div class="section">
-    <h2>Strengths</h2>
-    <ul id="strengths"></ul>
-  </div>
-
-  <div class="section">
-    <h2>Areas to Improve</h2>
-    <ul id="weaknesses"></ul>
-  </div>
-
-  <div class="section">
-    <h2>Feedback</h2>
-    <p id="feedback"></p>
-  </div>
-
-  <button id="downloadPdf">Download PDF</button>
-  <button id="downloadDocx">Download Word</button>
-
-  <script>
-    async function loadReport() {
-      try {
-        const res = await fetch('/interview_report.json');
-        const report = await res.json();
-
-        const ctx = document.getElementById('scoreChart').getContext('2d');
-        new Chart(ctx, {
-          type: 'radar',
-          data: {
-            labels: ['Communication', 'Confidence', 'Domain Knowledge', 'Overall'],
-            datasets: [{
-              label: 'Score (0-10)',
-              data: [
-                report.communication,
-                report.confidence,
-                report.domain_knowledge,
-                report.overall_score
-              ],
-              backgroundColor: 'rgba(0, 123, 255, 0.3)',
-              borderColor: 'rgba(0, 123, 255, 1)',
-              borderWidth: 2
-            }]
-          },
-          options: {
-            scales: {
-              r: { suggestedMin: 0, suggestedMax: 10 }
+    <header>InterviewBot - Interview Summary Report</header>
+    <main>
+        <div class="report-container">
+            <h2>Candidate Information</h2>
+            <p><strong>Name:</strong> <span id="candidateName">Loading...</span></p>
+            <p><strong>Email:</strong> <span id="candidateEmail">Loading...</span></p>
+            <p><strong>Phone:</strong> <span id="candidatePhone">Loading...</span></p>
+            <p><strong>Company:</strong> <span id="companyName">Loading...</span></p>
+            <p><strong>Job Description:</strong> <span id="jobDescription">Loading...</span></p>
+            <h2>Interview Evaluation</h2>
+            <div id="summaryReport">Loading...</div>
+            <button id="downloadPdfButton">Download PDF</button>
+        </div>
+    </main>
+    <footer>© 2025 InterviewBot. All rights reserved.</footer>
+    <script>
+        async function fetchUserData() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/get_user_data', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const result = await response.json();
+                if (result.status === 'success' && result.data && result.data.length > 0) {
+                    return result.data[result.data.length - 1];
+                }
+                return null;
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+                return null;
             }
-          }
-        });
+        }
 
-        // strengths
-        const strengthsEl = document.getElementById('strengths');
-        report.strengths.forEach(str => {
-          const li = document.createElement('li');
-          li.textContent = str;
-          strengthsEl.appendChild(li);
-        });
+        async function fetchSummaryReport() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/static/interview_report.json', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Error fetching summary report:', error);
+                return null;
+            }
+        }
 
-        // weaknesses
-        const weaknessesEl = document.getElementById('weaknesses');
-        report.weaknesses.forEach(w => {
-          const li = document.createElement('li');
-          li.textContent = w;
-          weaknessesEl.appendChild(li);
-        });
+        function displayReport(userData, summaryData) {
+            document.getElementById('candidateName').textContent = userData?.name || 'Unknown';
+            document.getElementById('candidateEmail').textContent = userData?.email || 'Unknown';
+            document.getElementById('candidatePhone').textContent = userData?.phone || 'Unknown';
+            document.getElementById('companyName').textContent = userData?.company || 'Unknown';
+            document.getElementById('jobDescription').textContent = userData?.job_description || 'Unknown';
 
-        document.getElementById('feedback').textContent = report.feedback;
+            const summaryDiv = document.getElementById('summaryReport');
+            if (summaryData) {
+                summaryDiv.innerHTML = `
+                    <p><strong>Communication:</strong> ${summaryData.communication}/10 - ${summaryData.feedback.includes('communicated well') ? 'Effective articulation observed.' : 'Needs clearer expression.'}</p>
+                    <p><strong>Confidence:</strong> ${summaryData.confidence}/10 - ${summaryData.confidence >= 7 ? 'Displayed strong confidence.' : 'Could show more assertiveness.'}</p>
+                    <p><strong>Domain Knowledge:</strong> ${summaryData.domain_knowledge}/10 - ${summaryData.domain_knowledge >= 7 ? 'Solid technical understanding.' : 'Lacks depth in key areas.'}</p>
+                    <p><strong>Overall Score:</strong> ${summaryData.overall_score}/10</p>
+                    <h3>Strengths:</h3>
+                    <ul>${summaryData.strengths.map(s => `<li>${s}</li>`).join('')}</ul>
+                    <h3>Areas to Improve:</h3>
+                    <ul>${summaryData.weaknesses.map(w => `<li>${w}</li>`).join('')}</ul>
+                    <h3>Feedback:</h3>
+                    <p>${summaryData.feedback}</p>
+                `;
+            } else {
+                summaryDiv.innerHTML = '<p>Error loading summary report.</p>';
+            }
+        }
 
-        // download buttons
-        document.getElementById('downloadPdf').addEventListener('click', () => {
-          const { jsPDF } = window.jspdf;
-          const doc = new jsPDF();
-          doc.text("Interview Summary Report", 10, 10);
-          doc.text(`Communication: ${report.communication}`, 10, 20);
-          doc.text(`Confidence: ${report.confidence}`, 10, 30);
-          doc.text(`Domain Knowledge: ${report.domain_knowledge}`, 10, 40);
-          doc.text(`Overall Score: ${report.overall_score}`, 10, 50);
-          doc.text("Strengths:", 10, 60);
-          report.strengths.forEach((s, i) => doc.text(`- ${s}`, 15, 70 + i*10));
-          doc.text("Weaknesses:", 10, 100);
-          report.weaknesses.forEach((w, i) => doc.text(`- ${w}`, 15, 110 + i*10));
-          doc.text("Feedback:", 10, 140);
-          doc.text(report.feedback, 10, 150);
-          doc.save("Interview_Report.pdf");
-        });
+        async function downloadPdf() {
+            const userData = await fetchUserData();
+            const summaryData = await fetchSummaryReport();
+            if (!userData || !summaryData) {
+                alert('Unable to generate PDF: Missing data.');
+                return;
+            }
 
-        document.getElementById('downloadDocx').addEventListener('click', () => {
-          const { Document, Packer, Paragraph, TextRun } = window.docx;
-          const doc = new Document({
-            sections: [{
-              properties: {},
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: "Interview Summary Report", bold: true, size: 32 })]
-                }),
-                new Paragraph(`Communication: ${report.communication}`),
-                new Paragraph(`Confidence: ${report.confidence}`),
-                new Paragraph(`Domain Knowledge: ${report.domain_knowledge}`),
-                new Paragraph(`Overall Score: ${report.overall_score}`),
-                new Paragraph("Strengths:"),
-                ...report.strengths.map(s => new Paragraph(`• ${s}`)),
-                new Paragraph("Weaknesses:"),
-                ...report.weaknesses.map(w => new Paragraph(`• ${w}`)),
-                new Paragraph("Feedback:"),
-                new Paragraph(report.feedback)
-              ]
-            }]
-          });
-          Packer.toBlob(doc).then(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "Interview_Report.docx";
-            a.click();
-          });
-        });
+            const latexContent = `
+\\documentclass[a4paper,11pt]{article}
+\\usepackage{geometry}
+\\geometry{margin=1in}
+\\usepackage{parskip}
+\\usepackage{enumitem}
+\\usepackage{titlesec}
+\\titleformat{\\section}{\\Large\\bfseries}{\\thesection}{1em}{}
+\\titleformat{\\subsection}{\\large\\bfseries}{\\thesubsection}{1em}{}
+\\usepackage{noto}
 
-      } catch (e) {
-        console.error("Error loading report:", e);
-      }
-    }
+\\begin{document}
 
-    loadReport();
-  </script>
+\\begin{center}
+    \\Huge{\\textbf{Interview Summary Report}}
+\\end{center}
+
+\\section*{Candidate Information}
+\\textbf{Name:} ${userData.name || 'Unknown'}\\\\
+\\textbf{Email:} ${userData.email || 'Unknown'}\\\\
+\\textbf{Phone:} ${userData.phone || 'Unknown'}\\\\
+\\textbf{Company:} ${userData.company || 'Unknown'}\\\\
+\\textbf{Job Description:} ${userData.job_description || 'Unknown'}
+
+\\section*{Interview Evaluation}
+\\textbf{Communication:} ${summaryData.communication}/10 --- ${summaryData.feedback.includes('communicated well') ? 'Effective articulation observed.' : 'Needs clearer expression.'}\\\\
+\\textbf{Confidence:} ${summaryData.confidence}/10 --- ${summaryData.confidence >= 7 ? 'Displayed strong confidence.' : 'Could show more assertiveness.'}\\\\
+\\textbf{Domain Knowledge:} ${summaryData.domain_knowledge}/10 --- ${summaryData.domain_knowledge >= 7 ? 'Solid technical understanding.' : 'Lacks depth in key areas.'}\\\\
+\\textbf{Overall Score:} ${summaryData.overall_score}/10
+
+\\subsection*{Strengths}
+\\begin{itemize}
+${summaryData.strengths.map(s => `    \\item ${s}`).join('\n')}
+\\end{itemize}
+
+\\subsection*{Areas to Improve}
+\\begin{itemize}
+${summaryData.weaknesses.map(w => `    \\item ${w}`).join('\n')}
+\\end{itemize}
+
+\\subsection*{Feedback}
+${summaryData.feedback}
+
+\\end{document}
+            `;
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/generate_pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latex: latexContent })
+                });
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'interview_summary.pdf';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Failed to generate PDF.');
+            }
+        }
+
+        window.onload = async () => {
+            const userData = await fetchUserData();
+            const summaryData = await fetchSummaryReport();
+            displayReport(userData, summaryData);
+            document.getElementById('downloadPdfButton').addEventListener('click', downloadPdf);
+        };
+    </script>
 </body>
 </html>
