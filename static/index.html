@@ -70,6 +70,18 @@
         button:hover {
             background: #0cc;
         }
+        #cameraFeed {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            display: none;
+        }
+        .photo-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
         @media (max-width: 768px) {
             .form-container {
                 padding: 1.5rem;
@@ -112,12 +124,25 @@
                 <input type="email" id="email" name="email" placeholder="Enter your email" required>
             </div>
             <div class="form-group">
+                <label for="company">Company Name</label>
+                <input type="text" id="company" name="company" placeholder="Enter the company you're applying to" required>
+            </div>
+            <div class="form-group">
                 <label for="jobDesc">Job Description</label>
                 <textarea id="jobDesc" name="jobDesc" placeholder="Paste job description here..." required></textarea>
             </div>
             <div class="form-group">
                 <label for="resume">Upload Resume (PDF or Image)</label>
                 <input type="file" id="resume" name="resume" accept=".pdf,.jpg,.jpeg,.png" required>
+            </div>
+            <div class="form-group">
+                <label for="photo">Upload or Take Photo</label>
+                <input type="file" id="photo" name="photo" accept=".jpg,.jpeg,.png" capture="user">
+                <video id="cameraFeed" autoplay></video>
+                <div class="photo-controls">
+                    <button type="button" id="startCamera">Start Camera</button>
+                    <button type="button" id="capturePhoto" disabled>Capture Photo</button>
+                </div>
             </div>
             <button type="submit">Submit and Start Interview</button>
         </form>
@@ -137,16 +162,20 @@
                 const nameInput = document.getElementById('name');
                 const phoneInput = document.getElementById('phone');
                 const emailInput = document.getElementById('email');
+                const companyInput = document.getElementById('company');
                 const jobDescInput = document.getElementById('jobDesc');
                 const resumeInput = document.getElementById('resume');
+                const photoInput = document.getElementById('photo');
 
-                if (!nameInput || !phoneInput || !emailInput || !jobDescInput || !resumeInput) {
+                if (!nameInput || !phoneInput || !emailInput || !companyInput || !jobDescInput || !resumeInput || !photoInput) {
                     console.error('One or more form inputs not found:', {
                         name: !!nameInput,
                         phone: !!phoneInput,
                         email: !!emailInput,
+                        company: !!companyInput,
                         jobDesc: !!jobDescInput,
-                        resume: !!resumeInput
+                        resume: !!resumeInput,
+                        photo: !!photoInput
                     });
                     alert('One or more form fields are missing. Please check the HTML.');
                     return;
@@ -155,6 +184,7 @@
                 formData.append('name', nameInput.value ? nameInput.value.trim() : '');
                 formData.append('phone', phoneInput.value ? phoneInput.value.trim() : '');
                 formData.append('email', emailInput.value ? emailInput.value.trim() : '');
+                formData.append('company', companyInput.value ? companyInput.value.trim() : '');
                 formData.append('jobDesc', jobDescInput.value ? jobDescInput.value.trim() : '');
                 const resumeFile = resumeInput.files[0];
                 if (!resumeFile) {
@@ -162,6 +192,12 @@
                     return;
                 }
                 formData.append('resume', resumeFile);
+                const photoFile = photoInput.files[0] || capturedPhoto;
+                if (!photoFile) {
+                    alert('Please upload or capture a photo.');
+                    return;
+                }
+                formData.append('photo', photoFile);
 
                 console.log('FormData contents:');
                 for (let [key, value] of formData.entries()) {
@@ -203,9 +239,44 @@
                 } catch (error) {
                     console.error('Submission error:', error.message, error.stack);
                     console.log('FormData sent:', [...formData.entries()]);
-                    console.log('Check if Flask server is running on http://127.0.0.1:5501 and logs for errors.');
+                    console.log('Check if Flask server is running on http://127.0.0.1:5000 and logs for errors.');
                     alert(`Failed to submit data: ${error.message}. Check browser Network tab and Flask logs for errors.`);
                 }
+            });
+
+            const startCamera = document.getElementById('startCamera');
+            const capturePhoto = document.getElementById('capturePhoto');
+            const cameraFeed = document.getElementById('cameraFeed');
+            let stream = null;
+            let capturedPhoto = null;
+
+            startCamera.addEventListener('click', async () => {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    cameraFeed.srcObject = stream;
+                    cameraFeed.style.display = 'block';
+                    capturePhoto.disabled = false;
+                } catch (err) {
+                    console.error('Error accessing camera:', err);
+                    alert('Failed to access camera. Please upload a photo instead.');
+                }
+            });
+
+            capturePhoto.addEventListener('click', () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = cameraFeed.videoWidth;
+                canvas.height = cameraFeed.videoHeight;
+                canvas.getContext('2d').drawImage(cameraFeed, 0, 0);
+                canvas.toBlob((blob) => {
+                    capturedPhoto = new File([blob], 'captured_photo.jpg', { type: 'image/jpeg' });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(capturedPhoto);
+                    photoInput.files = dataTransfer.files;
+                    stream.getTracks().forEach(track => track.stop());
+                    cameraFeed.srcObject = null;
+                    cameraFeed.style.display = 'none';
+                    capturePhoto.disabled = true;
+                }, 'image/jpeg');
             });
         });
     </script>
