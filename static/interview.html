@@ -29,14 +29,34 @@
             width: 100%;
             flex: 1;
             overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         #three-container {
+            position: relative;
+            width: 70%; /* Increased from 60% */
+            max-width: 900px; /* Adjusted max-width for larger screens */
+            height: 70%;
+            max-height: 600px;
+            background-image: url('https://images.unsplash.com/photo-1516321310764-8a42f8b6f8b0'); /* Formal office background */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 12px;
+            box-shadow: 0 0 15px #0ff6;
+            z-index: 1;
+        }
+        #webcamFeed {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
+            bottom: 2rem;
+            right: 2rem;
+            width: 250px; /* Increased from 200px */
+            height: 187.5px; /* Adjusted for 4:3 aspect ratio */
+            border-radius: 8px;
+            border: 2px solid #0ff;
+            box-shadow: 0 0 10px #0ff;
+            z-index: 5;
         }
         .controls {
             position: absolute;
@@ -68,24 +88,68 @@
             color: #0ff;
             z-index: 10;
         }
+        #questionDisplay {
+            position: absolute;
+            bottom: 6rem; /* Positioned above controls */
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+            text-align: center;
+            z-index: 5;
+            background: rgba(26, 26, 64, 0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            max-width: 90%;
+            line-height: 1.4;
+            text-shadow: 0 0 5px #0ff;
+        }
+        #viewReportButton {
+            display: none;
+        }
         @media (max-width: 768px) {
+            #three-container {
+                width: 80%; /* Adjusted from 80% */
+                height: 60%;
+            }
+            #webcamFeed {
+                width: 200px; /* Increased from 150px */
+                height: 150px; /* Adjusted for 4:3 aspect ratio */
+                bottom: 1rem;
+                right: 1rem;
+            }
             .controls {
                 flex-direction: column;
                 align-items: center;
+                bottom: 1rem;
             }
             button {
                 padding: 0.6rem 1.2rem;
+            }
+            #questionDisplay {
+                bottom: 5rem;
+                font-size: clamp(0.8rem, 2vw, 1rem);
+                max-width: 95%;
             }
         }
         @media (max-width: 480px) {
             header, footer {
                 font-size: clamp(1rem, 3vw, 1.2rem);
             }
-            .controls {
-                bottom: 1rem;
+            #three-container {
+                width: 90%; /* Adjusted from 90% */
+                height: 50%;
+            }
+            #webcamFeed {
+                width: 150px; /* Increased from 120px */
+                height: 112.5px; /* Adjusted for 4:3 aspect ratio */
             }
             button {
                 font-size: clamp(0.8rem, 2vw, 0.9rem);
+            }
+            #questionDisplay {
+                bottom: 4rem;
+                font-size: clamp(0.7rem, 1.8vw, 0.9rem);
             }
         }
     </style>
@@ -93,20 +157,19 @@
 <body>
     <header>InterviewBot - Your Virtual Interview</header>
     <main>
+        <div id="three-container"></div>
+        <video id="webcamFeed" autoplay playsinline></video>
         <div class="controls">
             <button id="toggleListenButton">Start Listening</button>
+            <button id="viewReportButton">View Report</button>
         </div>
-        <div id="three-container"></div>
+        <div id="questionDisplay"></div>
     </main>
     <footer>© 2025 InterviewBot. All rights reserved.</footer>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
-        // ElevenLabs API configuration (replace with your actual key)
-        const ELEVENLABS_API_KEY = 'sk_a3881bc8fb620032b8dc769691f6fe1818034ed67f6c22eb'; // Get from https://elevenlabs.io/app/profile/api-keys
-        const ELEVENLABS_VOICE_ID = 'tKZQTIqwDrPzLv6MrPxF'; // Sana voice ID
-
         // Function to clean text
         function cleanText(text) {
             return text.replace(/[\*•\-\n]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -129,7 +192,7 @@
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.2, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.7); // Match increased three-container width
         document.getElementById('three-container').appendChild(renderer.domElement);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enablePan = true;
@@ -160,15 +223,30 @@
         const clock = new THREE.Clock();
         let interviewQuestions = [];
         let currentQuestionIndex = 0;
+        let questionNumber = 1;
         let isInterviewMode = false;
         let interviewAnswers = [];
         let screenRecorder;
         let recordedChunks = [];
-        let isIntroductionPhase = true;
         let userData = null;
+        let fullTranscript = '';
+        let silenceTimer = null;
+        const SILENCE_TIMEOUT = 6000;
+        const MAX_LISTENING_TIME = 60000;
+
+        async function initWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                const webcamFeed = document.getElementById('webcamFeed');
+                webcamFeed.srcObject = stream;
+            } catch (err) {
+                console.error('Error accessing webcam:', err);
+                alert('Failed to access webcam. Please allow camera permissions.');
+            }
+        }
 
         const loader = new THREE.GLTFLoader();
-        loader.load('/static/models/Asian_withoutlight.glb', (gltf) => {
+        loader.load('/static/models/Asian_withoutlight.glb', async (gltf) => {
             model = gltf.scene;
             model.scale.set(0.1, 0.1, 0.1);
             model.position.set(0, 0, 0);
@@ -228,47 +306,56 @@
                     rootBone = child;
                 }
             });
-            fetchUserData().then(data => {
-                if (data) {
-                    userData = data;
-                    userName = data.name || 'User';
-                    navigator.mediaDevices.getDisplayMedia({
+            const data = await fetchUserData();
+            if (data) {
+                userData = data;
+                userName = data.name || 'User';
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
                         video: true,
                         audio: true
-                    }).then(stream => {
-                        screenRecorder = new MediaRecorder(stream);
-                        screenRecorder.ondataavailable = (e) => {
-                            if (e.data.size > 0) recordedChunks.push(e.data);
-                        };
-                        screenRecorder.onstop = () => {
-                            const blob = new Blob(recordedChunks, { type: "video/webm" });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = "interview_recording.webm";
-                            document.body.appendChild(a);
-                            a.click();
-                            setTimeout(() => {
-                                document.body.removeChild(a);
-                                window.URL.revokeObjectURL(url);
-                            }, 100);
-                        };
-                        screenRecorder.start();
-                    }).catch(err => {
-                        alert("Screen recording permission denied or failed.");
                     });
-
-                    speakWithAnimation(`Hello ${userName}, welcome to your mock interview! To get started, please tell me about yourself.`, () => {
-                        isInterviewMode = true;
-                        isIntroductionPhase = true;
-                        setTimeout(startListening, 500);
-                    }, 'bowGreeet');
-                } else {
-                    speakWithAnimation("Welcome! I couldn't find your details. Please go back and submit your information.", () => {
-                        window.location.href = '/index.html';
-                    }, 'talking');
+                    screenRecorder = new MediaRecorder(stream);
+                    screenRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) recordedChunks.push(e.data);
+                    };
+                    screenRecorder.onstop = () => {
+                        const blob = new Blob(recordedChunks, { type: "video/webm" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = "interview_recording.webm";
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => {
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                        }, 100);
+                    };
+                    screenRecorder.start();
+                } catch (err) {
+                    alert("Screen recording permission denied or failed.");
                 }
-            });
+                initWebcam();
+                speakWithAnimation(`Hello ${userName}, ready for your interview? Let's begin!`, async () => {
+                    isInterviewMode = true;
+                    console.log('Fetching initial questions');
+                    const success = await generateQuestions(userData.job_description, userData.resume_text, '', false);
+                    if (success) {
+                        console.log('Questions generated, asking first question');
+                        askNextQuestion();
+                    } else {
+                        console.error('Failed to generate questions');
+                        speakWithAnimation("I couldn't generate questions. Please try again.", () => {
+                            window.location.href = '/index.html';
+                        }, 'talking');
+                    }
+                }, 'bowGreeet');
+            } else {
+                speakWithAnimation("Welcome! I couldn't find your details. Please submit your information.", () => {
+                    window.location.href = '/index.html';
+                }, 'talking');
+            }
         }, (xhr) => {}, (error) => {
             console.error('Error loading model:', error);
             alert("Failed to load 3D model. Please refresh the page.");
@@ -276,7 +363,7 @@
 
         async function fetchUserData() {
             try {
-                const response = await fetch('/get_user_data', {
+                const response = await fetch('http://127.0.0.1:5000/get_user_data', {
                     method: 'GET',
                     headers: { 'Accept': 'application/json' }
                 });
@@ -294,24 +381,32 @@
             }
         }
 
-        async function generateQuestions(jobDescription, resumeText, previousAnswer = '') {
+        async function generateQuestions(jobDescription, resumeText, previousAnswer = '', isFollowUp = false) {
             try {
-                const numQuestions = Math.floor(Math.random() * 3) + 3;
-                console.log('Generating questions:', { numQuestions, jobDescription, previousAnswer });
-                const response = await fetch('/generate_questions', {
+                const numQuestions = Math.floor(Math.random() * 2) + 3;
+                console.log('Generating questions:', { numQuestions, jobDescription, previousAnswer, isFollowUp });
+                const response = await fetch('http://127.0.0.1:5000/generate_questions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         job_description: jobDescription,
                         previous_answer: previousAnswer,
-                        num_questions: numQuestions
+                        num_questions: numQuestions,
+                        is_follow_up: isFollowUp
                     })
                 });
                 const result = await response.json();
                 console.log('generateQuestions response:', result);
                 if (result.status === 'success' && Array.isArray(result.questions) && result.questions.length > 0) {
-                    interviewQuestions = result.questions;
-                    currentQuestionIndex = 0;
+                    if (isFollowUp) {
+                        const oldLength = interviewQuestions.length;
+                        interviewQuestions = interviewQuestions.concat(result.questions);
+                        currentQuestionIndex = oldLength;
+                        console.log(`Appended ${result.questions.length} follow-up questions. New total: ${interviewQuestions.length}`);
+                    } else {
+                        interviewQuestions = result.questions;
+                        currentQuestionIndex = 0;
+                    }
                     return true;
                 } else {
                     console.error('Invalid questions response:', result);
@@ -326,7 +421,7 @@
         async function fetchFromGemini(promptText) {
             try {
                 console.log('Fetching from Gemini with prompt:', promptText.substring(0, 100) + '...');
-                const response = await fetch('/generate_response', {
+                const response = await fetch('http://127.0.0.1:5000/generate_response', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: promptText })
@@ -358,7 +453,7 @@
             `;
 
             try {
-                const response = await fetch('/generate_response', {
+                const response = await fetch('http://127.0.0.1:5000/generate_response', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: summaryPrompt })
@@ -370,6 +465,18 @@
                 console.error('Error generating summary:', error);
                 return "There was an error creating the interview summary.";
             }
+        }
+
+        async function generateFeedbackForAnswer(question, answer) {
+            const prompt = `
+                You are a professional interviewer. Given the following interview question and the candidate's answer:
+                Question: ${question}
+                Answer: ${answer}
+                Generate a short, professional response as the interviewer would say after hearing the answer. 
+                Keep it to 1-2 sentences. Be neutral and constructive: praise good aspects if any, suggest improvements if needed, or acknowledge if the answer is insufficient (e.g., if they say "I don't know", suggest "That's okay, let's move on."). 
+                If the answer seems off-topic or unclear, gently redirect. Make it natural and encouraging overall, but not always overly positive for weak answers.
+            `;
+            return await fetchFromGemini(prompt);
         }
 
         async function speakWithAnimation(text, callback, animationType = 'none') {
@@ -397,26 +504,20 @@
                 if (idleAction) idleAction.reset().fadeIn(0.1).play();
             }
 
+            const questionDisplay = document.getElementById('questionDisplay');
+            if (text.startsWith('Question')) {
+                questionDisplay.innerText = resolvedText;
+            }
+
             try {
-                console.log('Speaking with ElevenLabs:', resolvedText);
-                const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+                console.log('Requesting TTS from backend:', resolvedText);
+                const response = await fetch('http://127.0.0.1:5000/tts', {
                     method: 'POST',
-                    headers: {
-                        'accept': 'audio/mpeg',
-                        'xi-api-key': ELEVENLABS_API_KEY,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        text: resolvedText,
-                        model_id: 'eleven_monolingual_v1',
-                        voice_settings: {
-                            stability: 0.5,
-                            similarity_boost: 0.5
-                        }
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: resolvedText })
                 });
                 if (!response.ok) {
-                    throw new Error(`ElevenLabs API error: ${response.status}`);
+                    throw new Error(`TTS endpoint error: ${response.status} - ${await response.text()}`);
                 }
 
                 const blob = await response.blob();
@@ -440,22 +541,17 @@
                         if (model) model.rotation.y = 0;
                         idleAction.reset().fadeIn(0.1).play();
                     }
+                    questionDisplay.innerText = '';
                     if (callback) callback();
                 };
                 audio.onerror = (e) => {
                     console.error("Audio playback error:", e);
                     isSpeaking = false;
-                    if (thinkingAction) thinkingAction.fadeOut(0.1);
-                    if (talking2Action) talking2Action.fadeOut(0.1);
-                    if (idleAction) {
-                        if (model) model.rotation.y = 0;
-                        idleAction.reset().fadeIn(0.1).play();
-                    }
                     tryWebSpeechFallback(resolvedText, callback, animationType);
                 };
                 audio.play();
             } catch (error) {
-                console.error("ElevenLabs TTS failed:", error);
+                console.error("TTS failed:", error);
                 tryWebSpeechFallback(resolvedText, callback, animationType);
             }
         }
@@ -470,6 +566,7 @@
                     if (model) model.rotation.y = 0;
                     idleAction.reset().fadeIn(0.1).play();
                 }
+                document.getElementById('questionDisplay').innerText = '';
                 alert(text);
                 if (callback) callback();
                 return;
@@ -503,6 +600,7 @@
                     if (model) model.rotation.y = 0;
                     idleAction.reset().fadeIn(0.1).play();
                 }
+                document.getElementById('questionDisplay').innerText = '';
                 if (callback) callback();
             };
             utterance.onerror = (e) => {
@@ -514,6 +612,7 @@
                     if (model) model.rotation.y = 0;
                     idleAction.reset().fadeIn(0.1).play();
                 }
+                document.getElementById('questionDisplay').innerText = '';
                 alert(text);
                 if (callback) callback();
             };
@@ -591,121 +690,172 @@
                 return;
             }
             recognition = new SpeechRecognition();
-            recognition.continuous = false; // Changed to false to ensure single response
-            recognition.interimResults = false;
+            recognition.continuous = true;
+            recognition.interimResults = true;
             recognition.lang = 'en-US';
+            fullTranscript = '';
+            let lastSpeechTime = Date.now();
+            let maxListeningTimer = null;
+
             recognition.onstart = () => {
                 console.log('Speech recognition started');
                 isListening = true;
                 document.getElementById('toggleListenButton').textContent = "Stop Listening";
+                maxListeningTimer = setTimeout(() => {
+                    console.log('Max listening time reached, forcing stop');
+                    stopAndProcess();
+                }, MAX_LISTENING_TIME);
             };
-            recognition.onresult = async (event) => {
-                const transcript = event.results[0][0].transcript.trim();
-                console.log('Speech recognition result:', transcript);
-                stopListening();
 
-                if (isInterviewMode) {
-                    interviewAnswers.push({
-                        question: isIntroductionPhase ? "Tell me about yourself" : interviewQuestions[currentQuestionIndex],
-                        answer: transcript
-                    });
-
-                    if (isIntroductionPhase) {
-                        speakWithAnimation(`Thank you for sharing, ${userName}. Let's move on to the next part of the interview.`, async () => {
-                            isIntroductionPhase = false;
-                            console.log('Fetching questions after introduction');
-                            const success = await generateQuestions(userData.job_description, userData.resume_text);
-                            if (success) {
-                                console.log('Questions generated, asking next question');
-                                askNextQuestion();
-                            } else {
-                                console.error('Failed to generate questions');
-                                speakWithAnimation("I couldn't generate questions. Please try again.", () => {
-                                    window.location.href = '/index.html';
-                                }, 'talking');
-                            }
-                        }, 'talking');
-                    } else {
-                        speakWithAnimation(`Let me review your answer...`, async () => {
-                            const geminiResponse = await fetchFromGemini(transcript);
-                            speakWithAnimation(geminiResponse, async () => {
-                                currentQuestionIndex++;
-                                if (currentQuestionIndex < interviewQuestions.length && Math.random() < 0.3) {
-                                    console.log('Generating follow-up question based on:', transcript);
-                                    const followUpSuccess = await generateQuestions(
-                                        userData.job_description,
-                                        userData.resume_text,
-                                        transcript
-                                    );
-                                    if (followUpSuccess) {
-                                        currentQuestionIndex = 0;
-                                    }
-                                }
-                                if (currentQuestionIndex >= interviewQuestions.length) {
-                                    speakWithAnimation(
-                                        "That was the last question. Good job! Your interview practice is complete.",
-                                        async () => {
-                                            isInterviewMode = false;
-                                            if (screenRecorder && screenRecorder.state !== "inactive") {
-                                                screenRecorder.stop();
-                                            }
-                                            console.log('Storing answers:', interviewAnswers);
-                                            await fetch('/store_answers', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ answers: interviewAnswers })
-                                            }).catch(err => console.error('Error storing answers:', err));
-                                            const summary = await generateInterviewSummary(interviewAnswers);
-                                            speakWithAnimation("Here is your interview summary report.", () => {
-                                                speakWithAnimation(summary, finishInterview, 'talking');
-                                            }, 'talking');
-                                        },
-                                        'bowGreeet'
-                                    );
-                                } else {
-                                    askNextQuestion();
-                                }
-                            }, 'talking');
-                        }, 'thinking');
-                    }
+            recognition.onresult = (event) => {
+                clearTimeout(silenceTimer);
+                lastSpeechTime = Date.now();
+                fullTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    fullTranscript += event.results[i][0].transcript;
                 }
+                console.log('Interim transcript:', fullTranscript);
+                silenceTimer = setTimeout(() => {
+                    console.log('Silence detected for 6 seconds, stopping recognition');
+                    stopAndProcess();
+                }, SILENCE_TIMEOUT);
             };
 
             recognition.onerror = (e) => {
                 console.error('Speech recognition error:', e.error);
-                stopListening();
-                if (e.error === 'no-speech') {
-                    console.log('No speech detected, restarting listening');
-                    setTimeout(startListening, 1000);
-                } else if (e.error === 'aborted') {
-                    console.log('Speech recognition aborted');
+                clearTimeout(silenceTimer);
+                clearTimeout(maxListeningTimer);
+                if (e.error === 'no-speech' || e.error === 'audio-capture' || e.error === 'not-allowed') {
+                    console.log('Stopping recognition due to error:', e.error);
+                    stopAndProcess();
                 } else {
+                    stopListening();
                     alert(`Speech recognition error: ${e.error}. Please try again.`);
                 }
             };
+
             recognition.onend = () => {
                 console.log('Speech recognition ended');
-                if (!isSpeaking) {
-                    isListening = false;
+                clearTimeout(maxListeningTimer);
+                if (isListening) {
+                    console.log('Attempting to restart recognition');
+                    try {
+                        recognition.start();
+                    } catch (err) {
+                        console.error('Error restarting recognition:', err);
+                        stopListening();
+                        alert('Failed to restart speech recognition. Please try again.');
+                    }
+                } else {
+                    console.log('Recognition stopped, updating button');
                     document.getElementById('toggleListenButton').textContent = "Start Listening";
                 }
             };
+
             try {
                 recognition.start();
                 console.log('Speech recognition initiated');
             } catch (err) {
                 console.error('Error starting speech recognition:', err);
                 alert("Failed to start speech recognition. Please check microphone permissions.");
+                stopListening();
+            }
+        }
+
+        async function stopAndProcess() {
+            console.log('Stopping and processing answer');
+            isListening = false;
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (err) {
+                    console.error('Error stopping recognition:', err);
+                }
+                recognition = null;
+            }
+            clearTimeout(silenceTimer);
+            console.log('Processed transcript:', fullTranscript.trim());
+            if (isInterviewMode && fullTranscript.trim()) {
+                const transcriptLower = fullTranscript.toLowerCase().trim();
+                if (transcriptLower.includes('repeat') || transcriptLower.includes('say again') || transcriptLower.includes('repeat the question')) {
+                    // Repeat the current question
+                    speakWithAnimation(`Question ${questionNumber}: ${interviewQuestions[currentQuestionIndex]}`, () => {
+                        setTimeout(startListening, 500);
+                    }, 'talking');
+                    return;
+                }
+
+                interviewAnswers.push({
+                    question: interviewQuestions[currentQuestionIndex],
+                    answer: fullTranscript.trim()
+                });
+
+                // Generate professional feedback based on the answer
+                const feedback = await generateFeedbackForAnswer(interviewQuestions[currentQuestionIndex], fullTranscript.trim());
+
+                if (currentQuestionIndex >= interviewQuestions.length - 1) {
+                    speakWithAnimation(
+                        feedback + " That's all! Great job! Let's prepare your summary.",
+                        async () => {
+                            isInterviewMode = false;
+                            if (screenRecorder && screenRecorder.state !== "inactive") {
+                                screenRecorder.stop();
+                            }
+                            console.log('Storing answers:', interviewAnswers);
+                            try {
+                                await fetch('http://127.0.0.1:5000/store_answers', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ answers: interviewAnswers })
+                                });
+                            } catch (err) {
+                                console.error('Error storing answers:', err);
+                            }
+                            await finishInterview();
+                        },
+                        'bowGreeet'
+                    );
+                } else {
+                    // Optionally generate follow-up
+                    let followUpGenerated = false;
+                    if (Math.random() < 0.5) {
+                        console.log('Generating follow-up question based on:', fullTranscript.trim());
+                        const followUpSuccess = await generateQuestions(
+                            userData.job_description,
+                            userData.resume_text,
+                            fullTranscript.trim(),
+                            true
+                        );
+                        followUpGenerated = followUpSuccess;
+                    }
+                    speakWithAnimation(
+                        feedback,
+                        () => {
+                            currentQuestionIndex++;
+                            questionNumber++;
+                            askNextQuestion();
+                        },
+                        'talking'
+                    );
+                }
+            } else {
+                askNextQuestion();
             }
         }
 
         function stopListening() {
-            if (recognition && !isSpeaking) {
-                console.log('Stopping speech recognition');
-                recognition.stop();
-                isListening = false;
-                document.getElementById('toggleListenButton').textContent = "Start Listening";
+            console.log('Manually stopping listening');
+            isListening = false;
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (err) {
+                    console.error('Error stopping recognition:', err);
+                }
+                recognition = null;
             }
+            clearTimeout(silenceTimer);
+            document.getElementById('toggleListenButton').textContent = "Start Listening";
         }
 
         function toggleListening() {
@@ -717,6 +867,9 @@
         }
 
         document.getElementById('toggleListenButton').addEventListener('click', toggleListening);
+        document.getElementById('viewReportButton').addEventListener('click', () => {
+            window.location.href = '/summary.html';
+        });
 
         document.addEventListener("visibilitychange", () => {
             if (document.hidden && isInterviewMode) {
@@ -725,7 +878,7 @@
                 if (screenRecorder && screenRecorder.state !== "inactive") {
                     screenRecorder.stop();
                 }
-                speakWithAnimation("Interview session ended because you changed the tab.", () => {
+                speakWithAnimation("Interview ended due to tab change.", () => {
                     window.location.href = '/index.html';
                 }, 'talking');
                 currentQuestionIndex = interviewQuestions.length;
@@ -735,27 +888,32 @@
 
         function askNextQuestion() {
             if (currentQuestionIndex >= interviewQuestions.length) {
-                speakWithAnimation("That was the last question. Well done! Let me prepare your interview summary.", async () => {
-                    isInterviewMode = false;
-                    if (screenRecorder && screenRecorder.state !== "inactive") {
-                        screenRecorder.stop();
-                    }
-                    console.log('Storing answers:', interviewAnswers);
-                    await fetch('/store_answers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ answers: interviewAnswers })
-                    }).catch(err => console.error('Error storing answers:', err));
-                    const summary = await generateInterviewSummary(interviewAnswers);
-                    speakWithAnimation("Here is your interview summary report.", () => {
-                        speakWithAnimation(summary, finishInterview, 'talking');
-                    }, 'talking');
-                }, 'bowGreeet');
+                speakWithAnimation(
+                    "That's all! Great job! Let's prepare your summary.",
+                    async () => {
+                        isInterviewMode = false;
+                        if (screenRecorder && screenRecorder.state !== "inactive") {
+                            screenRecorder.stop();
+                        }
+                        console.log('Storing answers:', interviewAnswers);
+                        try {
+                            await fetch('http://127.0.0.1:5000/store_answers', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ answers: interviewAnswers })
+                            });
+                        } catch (err) {
+                            console.error('Error storing answers:', err);
+                        }
+                        await finishInterview();
+                    },
+                    'bowGreeet'
+                );
                 return;
             }
             const question = interviewQuestions[currentQuestionIndex];
             console.log('Asking question:', question);
-            speakWithAnimation(`Question ${currentQuestionIndex + 1}: ${question}`, () => {
+            speakWithAnimation(`Question ${questionNumber}: ${question}`, () => {
                 setTimeout(startListening, 500);
             }, 'talking');
         }
@@ -763,11 +921,25 @@
         async function finishInterview() {
             try {
                 console.log('Generating final summary');
-                await fetch("/generate_summary", { method: "POST" });
-                window.location.href = "/summary.html";
+                document.getElementById('viewReportButton').style.display = 'block';
+                const summaryResponse = await fetch('/generate_summary', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const summaryData = await summaryResponse.json();
+                if (summaryData.status === 'success') {
+                    const summary = await generateInterviewSummary(interviewAnswers);
+                    speakWithAnimation("Here's your interview summary.", () => {
+                        speakWithAnimation(summary, () => {}, 'talking');
+                    }, 'talking');
+                } else {
+                    console.error('Error generating summary:', summaryData.error);
+                    speakWithAnimation("Summary generation failed, but you can view the report.", () => {}, 'talking');
+                }
             } catch (e) {
                 console.error('Error finishing interview:', e);
-                window.location.href = "/summary.html";
+                speakWithAnimation("Error preparing summary, but you can view the report.", () => {}, 'talking');
+                document.getElementById('viewReportButton').style.display = 'block';
             }
         }
 
@@ -785,13 +957,13 @@
             renderer.render(scene, camera);
         }
 
-        animate();
-
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = window.innerWidth * 0.7 / (window.innerHeight * 0.7); // Match increased three-container width
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.7);
         });
+
+        animate();
     </script>
 </body>
 </html>
