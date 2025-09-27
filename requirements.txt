@@ -1,8 +1,8 @@
-Flask==2.3.3 
-Pillow==10.4.0 
-pytesseract==0.3.13 
-pdf2image==1.17.0 
-pandas==2.2.2 
-google-genai>=1.29.0 
-flask-cors==4.0.1
-gunicorn==22.0.0
+Flask==3.0.0
+Pillow>=10.4.0
+pytesseract>=0.3.13
+pdf2image>=1.17.0
+pandas>=2.2.3
+google-genai>=1.29.0
+flask-cors>=4.0.1
+gunicorn>=22.0.0
